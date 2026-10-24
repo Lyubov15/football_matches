@@ -4,6 +4,7 @@ import {
   FlatList,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -18,6 +19,7 @@ import { UpdatedAgo } from '../components/UpdatedAgo';
 type Filter = 'all' | 'upcoming' | 'finished';
 
 export function MatchesScreen() {
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export function MatchesScreen() {
       if (!response.ok) throw new Error('Ошибка сети');
       const data: MatchesResponse = await response.json();
       setMatches(data.matches);
-      setLastUpdated(new Date()); // Сбрасываем время обновления
+      setLastUpdated(new Date()); 
     } catch (e) {
       setError('Не удалось загрузить матчи. Проверьте интернет.');
     } finally {
@@ -52,12 +54,10 @@ export function MatchesScreen() {
 
   // Фильтрация
   const filteredMatches = matches.filter((m) => {
-    // Сначала проверяем вкладку (Все/Предстоящие/Завершенные)
     let matchesTab = true;
     if (filter === 'upcoming') matchesTab = m.status === 'scheduled' || m.status === 'live';
     if (filter === 'finished') matchesTab = m.status === 'finished';
 
-    // 2. Затем проверяем поиск (если строка не пустая)
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch = query === '' ||
       m.home.name.toLowerCase().includes(query) ||
@@ -68,12 +68,10 @@ export function MatchesScreen() {
 
   // Рендер одной карточки
   const renderItem = ({ item }: { item: Match }) => {
-    // Красиво форматируем дату (в часовом поясе устройства)
     const dateStr = item.startsAt
       ? new Date(item.startsAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
       : 'Дата неизвестна';
 
-    // Русский статус
     const statusMap: Record<string, string> = {
       finished: 'Завершён',
       live: `В прямом эфире (${item.minute}')`,
@@ -83,20 +81,20 @@ export function MatchesScreen() {
     const statusText = statusMap[item.status] || item.status;
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, isDarkMode && styles.darkCard]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.date}>{dateStr}</Text>
+          <Text style={[styles.date, isDarkMode && styles.darkSubText]}>{dateStr}</Text>
           <FavoriteButton active={isFavorite(item.id)} onPress={() => toggle(item.id)} />
         </View>
 
         <Text style={styles.status}>{statusText}</Text>
 
         <View style={styles.teamsRow}>
-          <Text style={styles.teamName}>{item.home.name}</Text>
-          <Text style={styles.score}>
+          <Text style={[styles.teamName, isDarkMode && styles.darkText]}>{item.home.name}</Text>
+          <Text style={[styles.score, isDarkMode && styles.darkText]}>
             {item.score ? `${item.score.home} : ${item.score.away}` : '- : -'}
           </Text>
-          <Text style={styles.teamName}>{item.away.name}</Text>
+          <Text style={[styles.teamName, isDarkMode && styles.darkText]}>{item.away.name}</Text>
         </View>
       </View>
     );
@@ -105,9 +103,9 @@ export function MatchesScreen() {
   // Экран загрузки
   if (loading && matches.length === 0) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, isDarkMode && styles.darkContainer]}>
         <ActivityIndicator size="large" color="#ef3124" />
-        <Text style={styles.loadingText}>Загрузка матчей...</Text>
+        <Text style={[styles.loadingText, isDarkMode && styles.darkSubText]}>Загрузка матчей...</Text>
       </View>
     );
   }
@@ -115,7 +113,7 @@ export function MatchesScreen() {
   // Экран ошибки
   if (error) {
     return (
-      <View style={styles.center}>
+      <View style={[styles.center, isDarkMode && styles.darkContainer]}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable style={styles.retryButton} onPress={loadMatches}>
           <Text style={styles.retryText}>Повторить</Text>
@@ -125,8 +123,16 @@ export function MatchesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Матчи тура</Text>
+    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <View style={styles.headerRow}>
+        <Text style={[styles.title, isDarkMode && styles.darkText]}>Матчи тура</Text>
+        <Switch
+          value={isDarkMode}
+          onValueChange={setIsDarkMode}
+          trackColor={{ false: '#767577', true: '#ef3124' }}
+          thumbColor={'#f4f3f4'}
+        />
+      </View>
 
       {/* Панель с фильтрами и обновлением */}
       <View style={styles.toolbar}>
@@ -135,9 +141,9 @@ export function MatchesScreen() {
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
-              style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+              style={[styles.filterBtn, filter === f && styles.filterBtnActive, isDarkMode && filter !== f && styles.darkFilterBtn]}
             >
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive, isDarkMode && filter !== f && styles.darkSubText]}>
                 {f === 'all' ? 'Все' : f === 'upcoming' ? 'Предстоящие' : 'Завершённые'}
               </Text>
             </Pressable>
@@ -150,8 +156,9 @@ export function MatchesScreen() {
 
       {/* Поле поиска */}
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, isDarkMode && styles.darkSearchInput]}
         placeholder="Поиск по команде..."
+        placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -166,7 +173,7 @@ export function MatchesScreen() {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Матчей не найдено</Text>
+          <Text style={[styles.emptyText, isDarkMode && styles.darkSubText]}>Матчей не найдено</Text>
         }
       />
     </View>
@@ -174,9 +181,10 @@ export function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 16 },
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '700', color: '#111827' },
   toolbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   filters: { flexDirection: 'row', gap: 8 },
   filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#f3f4f6' },
@@ -190,14 +198,13 @@ const styles = StyleSheet.create({
   date: { fontSize: 13, color: '#6b7280' },
   status: { fontSize: 12, color: '#ef3124', fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' },
   teamsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  teamName: { fontSize: 16, fontWeight: '600', flex: 1 },
-  score: { fontSize: 18, fontWeight: '700', marginHorizontal: 12 },
+  teamName: { fontSize: 16, fontWeight: '600', flex: 1, color: '#111827' },
+  score: { fontSize: 18, fontWeight: '700', marginHorizontal: 12, color: '#111827' },
   loadingText: { marginTop: 12, color: '#6b7280' },
   errorText: { color: '#ef3124', marginBottom: 16, textAlign: 'center' },
   retryButton: { backgroundColor: '#ef3124', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8 },
   retryText: { color: '#fff', fontWeight: '600' },
   emptyText: { textAlign: 'center', color: '#6b7280', marginTop: 24 },
-  // Добавили стиль для поиска:
   searchInput: {
     backgroundColor: '#f3f4f6',
     paddingHorizontal: 12,
@@ -205,5 +212,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
     fontSize: 14,
+    color: '#111827',
   },
+  // --- Стили для темной темы ---
+  darkContainer: { backgroundColor: '#111827' },
+  darkText: { color: '#f9fafb' },
+  darkSubText: { color: '#9ca3af' },
+  darkCard: { backgroundColor: '#1f2937', borderColor: '#374151' },
+  darkSearchInput: { backgroundColor: '#374151', color: '#f9fafb' },
+  darkFilterBtn: { backgroundColor: '#374151' },
 });
