@@ -130,11 +130,3 @@ npm run android
 ```bash
 npm run ios
 ```
-
-## Проверка типов
-
-Для проверки TypeScript-кода:
-
-```bash
-npm run typecheck
-```
